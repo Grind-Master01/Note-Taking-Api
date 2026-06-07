@@ -25,34 +25,37 @@ app.get('/notes', (req,res) => {
 });
 
 //GET NOTE FOR ID
-app.get('/notes/:id', (req, res, next) =>{
+app.get('/notes/:id', (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-  if (isNaN(id)) return res.status(400).json({error : "Input is not a number"});
+    const idParam = req.params.id;  // convert param to number
+  // if (isNaN(id)) return res.status(400).json({error : "Input is not a number"});
   
-  const getNotes = notes.find(( notes => notes.id ===id));
+  const note = notes.find(( n => n.id.toString() === idParam));
 
-  if (!getNotes) {
+  if (!note) {
      return res.status(404).json({error:"Note not found"});
      }
-  return res.status(200).json({message: getNotes});
+  return res.status(200).json(note);
   } catch (error) {
     next(error);
+     res.status(500).json({ error: "Server error" });
   }
 });
- app.post ('/notes', (req, res) => {
+
+
+ app.post ('/notes', (req, res) => {  
   try {
     const { title, author } = req.body;
-
+    
      //Validate Input
     if (!title || !author) {
       return res.status(400).json({ error: " Title and author are required" });
     }
      //create new notes
-    const newNote = { id: notes.length + 1, title, author };
-    notes.push(newNotes);
+    const newNote = { id: crypto.randomBytes(8).toString('hex'), title, author };
+    notes.push(newNote);
 
-    res.status(201).json({ error: "Input invalid"});
+    res.status(201).json(newNote);
       
   } catch (err) {
     console.error(err);
@@ -61,8 +64,8 @@ app.get('/notes/:id', (req, res, next) =>{
 });
 
 app.put('/notes/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const note = notes.find(n => n.id === id);
+  const idParam = req.params.id;
+  const note = notes.find(n => n.id.toString() === idParam);
   if (!note) return res.status(404).json({ message: 'Note not found' });
 
   note.title = req.body.title;
@@ -72,21 +75,27 @@ app.put('/notes/:id', (req, res) => {
 
 // PATCH Update – Partial
 app.patch('/notes/:id', (req, res) => {
-   const id = parseInt(req.params.id);
-  const notes = notes.find(n => n.id === id); // Array.find()
-  if (!notes) return res.status(404).json({ message: 'Notes not found' });
-  Object.assign(notes, req.body); 
-  res.status(200).json(notes);
+   const id = req.params.id;
+  const note = notes.find(n => n.id.toString() === id); // Array.patch()
+  if (!note) return res.status(404).json({ error: 'Notes not found' });
+
+  const { title, author } = req.body;
+  if (title) note.title = title;
+  if (author) note.author = author;
+
+  res.status(200).json(note);
 });
 
 // DELETE Remove
 app.delete('/notes/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const initialLength = notes.length;
-  notes = notes.filter((n) => n.id !== id); // Array.filter() – non-destructive
-  if (notes.length === initialLength)
+  const id = req.params.id;  // get ID from URL
+  const index = notes.findIndex(n => n.id.toString() === id);
+  
+  if (index === -1) {
     return res.status(404).json({ error: 'Note not found' });
-  res.status(204).send(); // Silent success
+  }
+  notes.splice(index, 1); // remove the note
+  res.status(204).send(); // success, no content
 });
 
 
